@@ -1,0 +1,411 @@
+Table Of Contents
+
+1.0 - Database
+   1.1 Tables
+   1.2 Rebuilding the db
+   1.3 Resetting the data
+2.0 - Website PHP Pages
+   2.1 Admin Site
+   2.2 Public Site
+3.0 - Must Do's
+4.0 - Feature Requests
+5.0 - Notes
+
+
+
+
+1.0 Database
+============
+
+1.1 Tables
+----------
+
+BRACKET_RESULTS
+DARTS_ROUND_ROBIN
+EUCHRE_ROUND_ROBIN
+EVENT
+EVENT_PARTICIPANT_POINTS
+PARTICIPANTS
+POKER_RESULTS
+PONG_ROUND_ROBIN
+PONG_RR_LEADERBOARD (view)
+SAW_RESULTS
+SPECIAL_RESULTS
+STANDINGS
+STILL_ALIVE_EVENT
+TEAMS
+TUG_RESULTS
+VIEW_CURRENT_YEAR_STANDINGS
+VIEW_HISTORICAL_STANDINGS
+WONDERBOY
+YEARLY_RESULTS
+
+
+
+TABLE BRACKET_RESULTS
+
+this is a common table for all bracket results (Darts, Euchre and Ping Pong). 
+
+WID - WonderBoy ID 
+EID - Event ID
+TID1_WCL, TID2_WCL - the team IDs of the 2 Left Side Bracket WildCard Teams
+TID1_WCR, TID2_WCR - the team IDs of the 2 Right Side Bracket WildCar Teams
+TID1_SFL, TID2_SFL - the team IDs of the 2 Left Side Bracket SemiFinalist Teams
+TID1_SFR, TID2_SFR - the team IDs of the 2 Right Side Bracket SemiFinalist Teams
+TID1_F, TID2_F - the team IDs of the 2 Finalists 
+TID_C - the team ID of the finalist.
+
+NOTES:
+The add_results_bracket_playoffs.php feeds off this table to populate the bracket.  The add_results_bracket_playoffs_submit.php takes the info from the bracket and updates the still_alive_event and the event_participant_points to update the points earned and points still to be earned by players still in the game.
+
+
+
+TABLE DARTS_ROUND_ROBIN
+
+this table captures the games played for darts round robin.
+
+WID - WonderBoy ID
+GID - Game ID autoincrement
+TID1, TID2 - Team IDs of teams in game
+TIDW - Team ID that won
+TIDL - Team ID that lost
+time_added - timestamp of when game was recorded
+
+NOTES:
+The time_added is so that we can historically track the order in which the games were played.  This table is used by darts_round.php and add_results_darts_rr.php to list the games to be played, results of the games played and to also calculate the standings of the round robin. (If a GID has no TIDW > 0 it is a game to be played).  A TID of -1 is set aside for the wildcard entry.  With odd number of teams, there will always be a need for one wildcard.  The piece that takes care of that is during the generation of the games which is the algorithm found in the generate_darts_games.php
+
+
+TABLE EVENT
+
+The events of Wonderboy
+
+EID - event ID
+event_name - Event Name
+shortname - shortname useful for queries
+draws - number of draws
+WID - Wonderboy ID
+finals_in_progress - 0 means no, 1 means yes 
+robin_in_progress- 0 means no, 1 means yes
+misc - a catchall column for unique items that need to be configured per event
+
+NOTES: 
+The draws and progress are configured with the configure_events.php.  The draws must be determined before the teams are picked and the robin games are generated.  
+
+TABLE EVENT_PARTICIPANT_POINTS
+
+WID - Wonderboy ID
+EID - Event ID
+PID - Player ID
+Points - points earned (0,1,2,3,4,5 and 6(poker only))
+
+NOTES:
+This is where all the points are tracked for all events.  At the onset of Wonderboy, this table should be empty.  If you use the links in all the events' admin pages to reset the results, you should get to a point of 0 for all players in all events.  Leaderboard logic runs queries off of this using sums, etc.
+
+TABLE EUCHRE_ROUND_ROBIN
+
+Records the matches for the round robin phase of the event
+
+GID - Game ID, autoincrement.
+WID - WOnderboy ID
+TID1, TID2 - teams in the game
+TIDW - teamID of winner
+TIDL - teamID of loser
+WPTS - Points scored by winning team
+LPTS - Points score by losing team
+game_num - The round number for each set of games
+time_added - time the game was logged
+table_num - The table number for each game in the round.  
+table_name - the table name for each game
+tie - identifies a tie.  Once a game is complete, either there are TIDs added to the TIDW or TIDL or a '1' is added here to designate a tie
+
+Again, time_added helps to preserve the order of play.  The WPTS and LPTS are tracked since the differential makes a difference for tie breaks. 
+
+TABLE PARTICIPANTS
+
+Participants for a particular wonderboy year
+
+WID - Wonderboy ID
+PID - Player ID
+lname - last name
+fname - first name
+nickname - what goes in the "" of the official wonderboy name
+shortname - name used in brackets, etc.
+special - whether they will be shooting for the special
+
+NOTES:
+The special is keyed in when adding the person to this year's roster.  It is also used to generate the special results view.  There is duplication of data with table "standings" (which is misnamed...it is actually contains all participants ever) because I retro-fitted in the yearly_results stuff at the end.  In reality, we should be removing lname, fname, nickname and shortname but this would take work since queries in the php pages get this info from here instead of the standings table.
+
+TABLE STANDINGS
+
+This table is misnomered.  It really contains the list of all players who have ever attended Wonderboy.  
+
+PID - Player ID
+lname - last name
+fname - first name
+nickname - what goes in the "" of the official wonderboy name
+shortname - name used in brackets, etc.
+
+TABLE POKER_RESULTS
+
+Tracks the results of the final table and the wildcard table.
+
+WID - WOnderboy ID
+SID - Seat ID
+PID - Player ID
+Points - Points earned
+
+Points is tracked here in addition to event_participant_points.  In reality, the column should be 'placed' as in place they finished.  But then the values 1...6 would need to be inverted, etc. etc.  Probably not worth the effort?  But maybe it is once we move to archiving the tables.
+
+TABLE PONG_ROUND_ROBIN
+
+Records the matches for the round robin phase of the event
+
+GID - Game ID, autoincrement.
+WID - WOnderboy ID
+TID1, TID2 - teams in the game
+TIDW - teamID of winner
+TIDL - teamID of loser
+WPTS - Points scored by winning team
+LPTS - Points score by losing team
+draw - The draw (i.e. division) the teams are in
+time_added - time the game was logged
+
+Again, time_added helps to preserve the order of play.  The WPTS and LPTS are tracked since the differential makes a difference for tie breaks. 
+
+VIEW PONG_RR_LEADERBOARD
+
+this view is defunct and not used.
+
+TABLE SAW_RESULTS
+
+Records the Saw results.
+
+sGID - gameID, autoincrement
+WID - Wonderboy ID
+TID1 - 1st Place TeamID
+TID2 - 2nd Place TeamID
+TID3 - 3rd Place TeamID
+TID4 - 4th Place TeamID
+
+TABLE SPECIAL_RESULTS
+
+Records the who was in the special event and whether a point was score
+
+WID - Wonderboy ID
+PID - PlayerID
+Points - 0 or 1
+
+TABLE STILL_ALIVE_EVENT
+
+this table tracks who is still alive in certain events.
+
+WID - WonderboyID
+EID - EventID
+TID - TeamID
+PID - PlayerID
+points_left - points he can still earn
+bracket_pos - Where they currently place in the event
+
+The events that we care to track are the Saturday night events:  Poker final table, ping pong and darts brackets.  The leaderboards use this to convey who is still remaining in events and how many points are out there to be had....helps with the drama of determining who is still in the race.  The bracket_pos....I don't think I use it anywhere but might be useful on the dashboard:  "Player X is in the Semis of Ping-Pong, Currently sitting in 4th at the poker table and in the Wildcard for Darts". 
+
+TABLE TABLE_NAMES
+TABLE_NUM - unique identifier
+TABLE_NAME - table name
+
+TABLE TEAMS
+
+Stores the teams made up for all events
+
+TID - TeamID
+EID - EventID
+PID - PlayerID (So the key would be TID,PID to determine the player makeup of each team)
+draw - draw that the team is for the event
+WID - Wonderboy ID
+time_added - time team was added
+
+The time_added is very important during the drawing of names.  It presents the teams in order of when they were drawn.  This is useful to help navigate when making corrections as well as keeping historical record of the order that names were drawn.  Meaningless trivia...but fun.
+
+TABLE TUG_RESULTS
+
+tGID - GameID
+WID - WonderboyID
+TID1 - TeamID 1
+TID2 - TeamID 2
+WIN_TID - Winning TeamID
+
+VIEW VIEW_CURRENT_YEAR_STANDINGS
+
+This view builds the current year standings ordered highest to least.
+
+select `event_participant_points`.`PID` AS `PID`,sum(`event_participant_points`.`Points`) AS `Total` from `event_participant_points` where (`event_participant_points`.`WID` = 1) group by `event_participant_points`.`PID` order by sum(`event_participant_points`.`Points`) desc,`event_participant_points`.`PID` desc;
+
+VIEW VIEW_HISTORICAL_STANDINGS
+
+This view builds the historical standings of all wonderboys over the years.  It's a complex query that sums up the yearly_results table.
+
+select `standings`.`nickname` AS `nickname`,`standings`.`PID` AS `PID`,ifnull(sum(`yearly_results`.`Points`),0) AS `Total` from (`standings` left join `yearly_results` on((`standings`.`PID` = `yearly_results`.`PID`))) group by `standings`.`PID` order by sum(`yearly_results`.`Points`) desc,`standings`.`PID` desc;
+
+TABLE WONDERBOY
+
+Stores the details about the Wonderboy event itself
+
+WID - WonderboyID - Used everywhere to map the events/results to the year they took place
+year - year of the event
+name - The display name for the php pages
+slogan - the slogan chosen for the year's event
+
+TABLE YEARLY_RESULTS
+
+contains the results of each year for each player who ever attended.  
+
+YID - YearID
+yearname - last two digits of year
+PID - Player ID
+Finish - place finished
+Points - Points earned
+Sow - 0 or 1
+Ass - 0 or 1
+Shovel - 0 or 1
+
+After each Wonderboy, we need to transfer the results to this table so that we can reset the working tables and thus the aggregated queries continue to work.  Manual process today.
+
+
+
+
+
+DATABASE/APP Issues:
+
+How does the historical and players relate?  If I add a new player, I can't remember, how do things link up between attendees and the historical?  For a new player, do I add to both tables?  This is important for figuring out the multiyear capability for the tables.
+
+This is the tricky piece:  Standings is really just all the players ever.  The historical standings php is a joining of the view_current_year_standings and view_historical_standings plus some more jiggery to get the positional gain for the year.  If we support MULTI-YEAR, the easiest way to implement is to manually add the WB12 data into the yearly_results table and then make sure queries are working for the WID.
+
+
+1.2 Rebuilding the db
+---------------------
+
+See building_site_locally.txt
+
+1.3 Resetting the data (works only for 1 yr of data...)
+-------------------------------------------------------
+
+TO GET EVERYTHING BACK TO THE INITIAL STATE:
+1)  for all the events, using the Add Results for each event, there is a link to reset the scores.  If done to all events the scoring is cleared out (scoreboard, etc.).  This is useful but also has undesirable effects once we are started: if one of us clicks this, and then also clicks OK to the WARNING dialog that pops up, we'll lose the data.  I am probably going to move these links to an out-of-the-way location on the page so that it would be very hard to click on it by mistake.
+2)  for the round-robin, resetting all games will reset the scoring for those events and bring them to the initial state.  Clicking this and also OK on the dialog loses the data
+3)  Delete all the teams/ players for the events
+
+Once all three are performed, the system is ready to go.  
+
+2.0 Website Pages
+=================
+
+See building_site_locally.txt to generate site on xampp
+
+The site is broken into an admin area and the public area that shows the results.
+
+2.1 Admin site
+--------------
+/WB12/admin/WBadmin.php - this is the main page that brings up the index and also sets a USER value of admin in the session.  This is done for 2 reasons.  1) It helped to remove confusions that occurred due to code reuse.  For example, for the public area bracket views, I call the admin version of the page.  The admin page keys off whether the user is admin (which can only happen by going through the WBadmin.php page (and nobody but Greg and myself knew the URL).  The page then displays the info in a read-only way (the 'viewonly' flag) if not an admin user. 2)  We can use this session value and wrap security around it if desired.
+
+The pages are quite self-explanatory.  I followed the pattern of add pages, delete pages for results and teams.  The add pages typically have a main add_results_*.php and a corresponding submit.php to update the database.  
+
+There are some 'generate' pages.  These pages contain the algorithmic logic to generate the draws for darts and ping-pong.  These are the only two event require this sort of work.  For euchre, the system only takes care of managing the teams at draw time and the brackets for the playoffs.  The table rotation logic is handled by Eric's app.  We could incorporate this if we had the time but it's way down on the wish list.
+
+The flow is typically this: 
+Manage Participants - manage_participants.php - This is the launchpoint for adding players to the year's Wonderboy.  From here you can add/drop to the tournament.  There is a dropdown for returning players that keys off of the database.  You can also add new players.  You can remove players from the tournament but you can't delete them from the database.
+
+You can configure events - configure_events.php - Not for adding new events but for configuring the number of draws, and what portion of each event is in progress.  The draws need to be set before the names are drawn.  It affects the forms that are used for adding teams/players to events.  The in progress flag will add a link to the main view page to display the event is in progress.
+
+You can assign teams - These pages are used during the open ceremony draws.  The draws in the forms are defined prior by using teh config events. You can add/drop players/teams. and format the page for printing You can't modify a team.  You need to drop it and re-add it.
+
+You can add results - This is the guts of the app during the execution of the events.  There is clear indication of what to use for scoring each event.  Underneath the covers, the database results tables will be updated.  Each game is recorded and the appropriate info is stored for reports that are generated on the main view site.  For round-robin, you can add results, but you can't modify results.  You need to drop and re-add. On the round-robin pages, there is a 'Regenerate All Games' in the bottom left out of the way area.  This will regenerate all the permutation of games.  On all the other add result pages, there is a reset scores.  This is all useful for resett-ing the event in the case of screw-ups.  I'M SURE THIS NEEDS TO BE LOOKED AT TO SUPPORT MULTI-YEAR DATA STORAGE IN THE TABLES.
+
+There is one unique event - the special.  That event's participants is generated by using the SPECIAL flag on the 	manage_participants.php when adding the participant to the event.
+
+2.2 Public Site
+---------------
+
+/WB12/index.php - This is the home page dashboard.  Shows the Top Ten of the current year's standings if a point has been earned in the event.  If no points yet earned, it shows the top ten historical standings.
+
+There is a News section and an 'events in progress' section.  The News section feeds off of tweets to the Wonderboy Twitter account.  The events in prog keys off of the flag in the configure_events.php on admin site.  The bottom section is a very crappy looking site navigator.  The main page uses <table> layouts and is very ad-hoc.  Would love to re-structure this page properly.
+
+The rest of the pages (View, Round-Robin, Playoffs, Teams, Tables, etc.) are mostly 'read-only' versions that call the admin page version using the session cookie to force read-only.  For some reason I didn't do this for the darts_round and pingpong_round pages as well as log and poker.  Can't remember why but it does mean duplicated code unfortunately.
+
+There is a standings.php - for this years standings.  It builds the results by looking at the event_participant_points table (or view).  That table is kept up-to-date by the admin side's submission of results.  It also looks at the still_alive_event table to see what events a player can still earn points and highlights that entry green to indicate they can still earn points.  This mechanism is also used on the main page top ten.  If a person's score is green it indicates he still has points and updates how many (but not in which event).
+
+The historical standings uses a view that I built to amalgamate the historical standings of previous years (that I added manually to the db) and the current year.  It combines them to provide the the ordered overall standings and also presents the increase due to the current year and also the jump in standings if one happened as a result of points gained that year.  SOME WORK HERE NEEDS TO BE DONE WHEN CONSIDERING MULTI-YEAR SUPPORT IN THE TABLES.
+
+
+
+3.0 Must Dos
+============
+
+- Review how to reset the data when only one year of data
+- - Do some more preventative on mistakenly regenerating the draws or resetting data
+
+- Propogate the '12 points to the yearly_results
+
+- Allow for MULTI-YEAR SUPPORT in the tables and website.
+	- finish implementing WID
+	- get rid of the WB12 in the URI....might not require anything
+	- get rid of any hardcoded WB12 in the pages.
+	- process to 'reset' '13 data without affecting '12
+	- make sure the generate draws works
+	- make sure all the features work (brackets, leaderboard)
+	- will need to make sure the attendees work
+	- all the above without impacting '12
+	- add a new feature to the web to browse complete results of previoius year(s).  Basically a 'snapshot'
+	  sort of view of the results of previous years
+
+- add some more style to the presentation. 
+- pretty up the navigation and table presentations 
+- Re-factoring.  Big effort....
+
+4.0 Feature enhancements
+========================
+- password protect the admin site
+
+now having a chance to see the site in action, here's my first recommendation for improvement:
+
+* there should be 3 columns for points:  Awarded, Guaranteed, Potential.  
+* The Awarded column is the traditional points that we've had at WB.  
+  It's only allocated once someone is out of the event (so, it would 
+  show 1 point for someone who lost in a semifinal, but 0 if they make it 
+  on to the final but haven't yet played; or it would show points for someone 
+  who made it to the final table but then got knocked out, but it wouldn't show 
+  points for people still in).
+ * The leaderboard is sorted by by Awarded column (as traditionally done).  A nice-to-have would
+   be a yellow tie symbol beside the leader (although, this is only changes at the end of an event
+   not mid-event)(see above point how mid-event, the person with most awarded points may not have
+   the yellow tie, if there's others still in an event that could pass them).  (Programmatically, this would mean keeping a 4th column, with "points awarded in completed events", and the top person in this (also taking into account position in poker to break ties) gets the yellow tie)
+ * The Guaranteed points column is the one that is currently on the website
+ * Potential points should include events not yet started.  Before WB starts, this would show either 27
+   or 28 points, depending on whether the person is eligible for the bonus event. 
+
+Also a nice-to-have, would be indicating people still in the hunt for WB.
+I don't know if we'd want to show this, but it's something that people were trying to
+figure out towards the end.  I'm not sure how this would be calculated programmatically.
+Let me think of the algorithm.
+
+ * Report for cumulative points per event per player and ranking.
+ * use bracket_pos in the the still alive table to display on the dashboard certain players and what they are still alive in.
+
+5.0 Notes, observations, etc derived from correspondence
+========================================================
+
+I've added in the Darts Round-Robin admin and view pages.  They work very similar to the ping-pong:
+
+1)  Generate the games.  If there are odd number of teams then one team will play one game against a **WILDCARD TEAM**.  The system generates the games appropriately and displays the standings accordingly.
+2)  Submit the games as they are played.  
+3)  The leaderboard is updated realtime with the W/L totals sorted by W (descending) and then L (ascending)
+
+1)  The system assumes the teams and the draws (for ping-pong) are static once you generate the round-robin games.  If a team drops out once the round-robins have started and scores have happened we will have a problem.  But Greg you mentioned this won't happen and would be a bitch to deal with even without the system.  NOTE, if there is a shuffle of teams after you've generated the games but before play has started, this can be handled by updating the teams for the event and then regenerating the games.
+2)  If a team is removed from an event and that team was in the bracket playoffs for the event, the leaderboard doesn't clean up the points they had until the bracket board is updated with a different team.  Again, this will never happen since anybody in the darts playoffs for example wouldn't be removed from the event unless one of us makes a mistake and erroneously deletes them from the event.
+
+
+I see youve been testing. I actually watched your data entries.  You exposed a bug i need to fix but for now its a straightforward workaround:  on the playoffs brackets you need to have the left side finalist go in the top field and the right side finalist go in the bottom field of the finals. Or else the points available stuff breaks
+
+1)  On the main view page http://micheldesroches.com/WB12, the top 10 leaderboard now shows the points still available along with totals.  The points available taken into account are euchre/darts/pong and poker.  I don't think it's necessary to show points avail for tug and saw since they are over and done with quickly.
+2)  On the current year leaderboard, I've added two features:
+ - The 'sow line'.  Anybody below this line is in jeopardy of earning the Silver Sow
+ - Players with green backgrounds on their scores for a particular event indicates that they are still alive in the event
+3)  This one's for you Greg:  On the historical standings board http://micheldesroches.com/WB12/historical_standings.php -- the board that is the overall leaderboard of accumulated  yearly points -- the point tally is now up-to-date to include previous years PLUS current year.  Also, a new column to show the increase for those who have earned points this year.  FINALLY, beside certain players you will see a little green up-arrow and a number.  For those players, they have made a jump in the overall accumulative standings.  The number indicates the jump that was made.  
